@@ -1,0 +1,20 @@
+# Environments
+env/
+venv/
+.env
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Data (Crucial: Keep raw data local)
+data/raw/
+data/quarantine/
+*.csv
+*.zip
+
+# OS generated files
+.DS_Store
