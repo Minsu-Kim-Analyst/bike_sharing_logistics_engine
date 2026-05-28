@@ -1,16 +1,21 @@
 import pandas as pd
 from sqlalchemy import create_engine
 from pathlib import Path
+import os
+from dotenv import load_dotenv
 
+# Load the secret vault
+load_dotenv()
 
 def export_dashboard_data():
     """Extracts the final August 1st analytical forecast for Tableau Public."""
 
-    DB_USER = "postgres"
-    DB_PASS = "Mk1111653*"  # ⚠️ UPDATE THIS
-    DB_HOST = "localhost"
-    DB_PORT = "5432"
-    DB_NAME = "bike_share_dw"
+    # Pull the passwords securely from the .env file
+    DB_USER = os.getenv("DB_USER")
+    DB_PASS = os.getenv("DB_PASS")
+    DB_HOST = os.getenv("DB_HOST")
+    DB_PORT = os.getenv("DB_PORT")
+    DB_NAME = os.getenv("DB_NAME")
 
     print("[CONN] Connecting to PostgreSQL Data Warehouse...")
     engine = create_engine(f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}")

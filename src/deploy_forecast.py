@@ -3,17 +3,21 @@ import joblib
 from sqlalchemy import create_engine
 import datetime
 from pathlib import Path
+import os
+from dotenv import load_dotenv
 
+# Load the secret vault
+load_dotenv()
 
 def deploy_inventory_forecast():
     """Generates a 24-hour Net Inventory forecast for August 1, 2025."""
 
-    # Database configuration credentials
-    DB_USER = "postgres"
-    DB_PASS = "Mk1111653*"  # ⚠️ UPDATE THIS TO YOUR ACTUAL POSTGRES PASSWORD
-    DB_HOST = "localhost"
-    DB_PORT = "5432"
-    DB_NAME = "bike_share_dw"
+    # Pull the passwords securely from the .env file
+    DB_USER = os.getenv("DB_USER")
+    DB_PASS = os.getenv("DB_PASS")
+    DB_HOST = os.getenv("DB_HOST")
+    DB_PORT = os.getenv("DB_PORT")
+    DB_NAME = os.getenv("DB_NAME")
 
     engine = create_engine(f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 

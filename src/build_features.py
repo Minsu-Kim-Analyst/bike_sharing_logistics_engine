@@ -2,16 +2,19 @@ import pandas as pd
 from sqlalchemy import create_engine
 import holidays
 from pathlib import Path
+import os
+from dotenv import load_dotenv
 
+# Load the secret vault
+load_dotenv()
 
 def build_feature_matrix():
-    """Extracts Net Inventory Delta and engineers rolling averages for the ML model."""
-
-    DB_USER = "postgres"
-    DB_PASS = "Mk1111653*"  # ⚠️ CHANGE THIS
-    DB_HOST = "localhost"
-    DB_PORT = "5432"
-    DB_NAME = "bike_share_dw"
+    # Pull the passwords securely from the .env file
+    DB_USER = os.getenv("DB_USER")
+    DB_PASS = os.getenv("DB_PASS")
+    DB_HOST = os.getenv("DB_HOST")
+    DB_PORT = os.getenv("DB_PORT")
+    DB_NAME = os.getenv("DB_NAME")
 
     engine = create_engine(f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 
