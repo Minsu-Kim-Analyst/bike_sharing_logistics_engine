@@ -1,6 +1,6 @@
 # Proactive Bike Share Logistics Engine
 
-**Live Executive Dashboard:** [INSERT YOUR TABLEAU LINK HERE]
+**Live Executive Dashboard:** (https://public.tableau.com/app/profile/minsu.kim8285/viz/ProactiveBikeShareLogisticsEngine/Sheet1)
 
 ## 1. The Business Problem
 City bike-share networks lose revenue in two primary ways: Stockouts (empty stations) and Overflows (full stations). Currently, urban dispatch logistics operate *reactively*—trucks are only deployed after a station has completely drained, resulting in unfulfilled demand and customer friction during peak commuting hours.
