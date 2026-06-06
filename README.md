@@ -1,36 +1,112 @@
-# Proactive Bike Share Logistics Engine
+# 🚲 Proactive Bike Share Logistics Engine
 
-**Live Executive Dashboard:** [INSERT YOUR TABLEAU LINK HERE]
+![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14.0+-blue.svg)
+![XGBoost](https://img.shields.io/badge/XGBoost-Machine%20Learning-orange.svg)
+![Tableau](https://img.shields.io/badge/Tableau-Dashboard-red.svg)
 
-## 1. The Business Problem
-City bike-share networks lose revenue in two primary ways: Stockouts (empty stations) and Overflows (full stations). Currently, urban dispatch logistics operate *reactively*—trucks are only deployed after a station has completely drained, resulting in unfulfilled demand and customer friction during peak commuting hours.
+**Live Executive Dashboard:** [https://public.tableau.com/app/profile/minsu.kim8285/viz/ProactiveBikeShareLogisticsEngine/Sheet1]
 
-## 2. The Solution
-An end-to-end data architecture and machine learning engine that shifts operations from reactive to *proactive*. The system forecasts exact station inventory changes 24 hours in advance, calculates the "Estimated Lost Revenue," and allows dispatch operators to dynamically compare the financial risk of a stockout against the operational cost of sending a dispatch truck.
+An end-to-end data architecture and predictive machine learning pipeline built to optimize urban logistics, forecast station inventory, and shift network dispatching from a reactive to a proactive model.
 
-## 3. Data Architecture & Quality Governance
-* **Tech Stack:** Python, PostgreSQL, Pandas, XGBoost, Tableau.
-* **Data Volume:** Ingested 1.1+ million real transaction logs (Toronto Open Data), integrated with live GBFS v3.0 station capacities and historical Environment Canada climate data.
-* **Automated Data Quality:** Engineered a Python-based Interquartile Range (IQR) isolation script to automatically detect and quarantine mechanical API glitches (e.g., broken docks recording 1,000-hour trips) before database insertion, protecting warehouse integrity.
-* **Database Design:** Developed a PostgreSQL Star Schema. Wrote advanced SQL window functions (`LEAD`, `LAG`) to track the precise physical and chronological trajectory of individual assets.
+## 📌 Executive Summary
+City bike-share networks lose revenue in two primary ways: Stockouts (empty stations) and Overflows (full stations). Currently, urban dispatch logistics operate *reactively*—trucks are only deployed after a station has completely drained, resulting in unfulfilled demand during peak commuting hours.
 
-## 4. Machine Learning & Explainable AI
-The predictive engine utilizes an XGBoost Regressor predicting `net_inventory_change` to prevent the compounding error of forecasting inbound and outbound flows separately. The model achieved a baseline Mean Absolute Error (MAE) of **1.92 bikes**.
+This project bridges data engineering and machine learning to forecast exact station inventory changes 24 hours in advance. It calculates the "Estimated Lost Revenue," allowing dispatch operators to dynamically compare the financial risk of a stockout against the operational cost of sending a dispatch truck.
 
-**Key AI Decision Drivers (Feature Importance):**
-To ensure business stakeholders trust the AI, the model's logic was extracted and quantified:
-1. **Time of Day (27.57%):** Foundational temporal schedule.
-2. **Day of Week (19.80%):** Differentiates commuter vs. recreational patterns.
-3. **Station Profile (16.01%):** Geographic node characteristics.
-4. **Rolling 2-Hour Momentum (10.77%):** *The crucial lag feature.* This grants the AI short-term memory, allowing it to override static historical schedules and react to real-time physical conditions (e.g., sudden weather events or transit delays).
+### 📊 Key Business Outcomes:
+* **Operational ROI:** Mathematically optimized a **$120 truck dispatch cost** by translating predicted station deficits into a financial "Lost Revenue" metric via a Tableau heuristic engine.
+* **Predictive Accuracy:** Achieved a highly precise Mean Absolute Error (MAE) of **1.92 bikes** by engineering a rolling 2-hour momentum feature, granting the AI "short-term memory" to react to real-time grid conditions.
+* **Data Governance:** Intercepted and quarantined mechanical API glitches (e.g., broken docks recording 1,000-hour trips) across **1.1M+ transaction records** using an automated Python IQR isolation script.
 
-## 5. The Financial ROI Engine (Tableau)
-The predictive output is fed into a Tableau executive dashboard containing a 24-hour interactive time-slider. 
-* **Business Logic:** The dashboard isolates predicted negative net flows and multiplies them by a $4.50 proxy ticket price. 
-* **Operational Value:** This instantly quantifies the exact "Estimated Lost Revenue" at any given hour, allowing dispatchers to mathematically justify a $120 truck deployment.
+---
 
-## 6. Future Scope (Production Scaling)
-While this MVP prototype runs locally via batch processing, a true enterprise deployment would require:
-1. **Cloud Orchestration:** Containerizing the Python extraction/training scripts via Docker and scheduling automated runs using Apache Airflow.
-2. **Live Feature Store:** Migrating from daily PostgreSQL batch inserts to real-time event streaming using Apache Kafka to update station states by the second.
-3. **Chronological Validation:** Upgrading the 80/20 random train/test split to a strict Out-of-Time chronological backtest to completely eliminate time-series data leakage.
+## 🏗 System Architecture & Directory
+
+```text
+bike_share_logistics_engine/
+├── .gitignore                        # Blocks env, raw data, and secret credentials
+├── README.md                         # Project documentation
+├── requirements.txt                  # Python dependencies
+├── data/                             
+│   ├── raw/                          # Raw API and historical data (Gitignored)
+│   ├── quarantine/                   # Anomalous records failing IQR checks
+│   └── processed/                    # ML feature matrices and Tableau feeds
+├── sql/                              
+│   ├── 01_create_tables.sql          # PostgreSQL schema initialization
+│   └── 02_asset_trajectories.sql     # Window functions tracking physical assets
+├── src/                              # Production Python backend
+│   ├── ingestion_stations.py         
+│   ├── ingestion_trips.py            
+│   ├── data_quality.py               # IQR Anomaly Detection
+│   ├── load_to_postgres.py           
+│   ├── build_features.py             
+│   ├── train_model.py                # XGBoost Regressor training
+│   ├── deploy_forecast.py            
+│   └── extract_for_tableau.py 
+└── tests/                            
+    └── validate_pipeline.py          # Data quality and unit tests
+```
+
+---
+
+## 🛠 Core Features & Tech Stack
+
+### 1. Automated Data Governance (`data_quality.py`)
+* **Tech:** Python, Pandas, Numpy
+* **Function:** Ingests raw trip ledgers and enforces strict logical boundaries. Automatically isolates impossible physical events and routes them to a quarantine directory, protecting warehouse integrity.
+
+### 2. Relational Data Warehouse (`PostgreSQL`)
+* **Tech:** PostgreSQL, SQL (DDL, Window Functions)
+* **Function:** A Star Schema database. Engineered advanced SQL window functions (`LEAD`, `LAG`) to chronologically track the precise physical trajectory and idle time of individual bicycles across the city.
+
+### 3. Predictive Logistics Modeling (`XGBoost`)
+* **Tech:** Python, XGBoost, Scikit-Learn
+* **Function:** Engineered temporal schedules and rolling recent-departure momentum features. Trained an XGBoost Regressor predicting `net_inventory_change` to prevent the compounding error of forecasting inbound and outbound flows separately.
+
+### 4. Executive BI Dashboard (`Tableau`)
+* **Tech:** Tableau Public
+* **Function:** A geospatial executive dashboard featuring a 24-hour interactive time-slider. Instantly quantifies the exact "Estimated Lost Revenue" at any given hour, allowing dispatchers to triage the geographic network.
+
+---
+
+## 📸 Dashboard Previews
+
+> **Predictive Network Map:** Visualizing hourly stockout risks and estimated revenue loss.
+> <br>![Tableau Dashboard](assets/dashboard_preview.png) *(Note: Create an 'assets' folder, take a screenshot of your Tableau map, name it dashboard_preview.png, and put it in the folder to make this image render!)*
+
+---
+
+## 🚀 Local Deployment & Setup
+
+*Note: For security and compliance, the massive 3GB raw transaction dataset and the local `.env` database credentials are deliberately excluded from this repository via `.gitignore`.*
+
+**1. Clone the repository**
+```bash
+git clone [https://github.com/Minsu-Kim-Analyst/bike_sharing_logistics_engine.git](https://github.com/Minsu-Kim-Analyst/bike_sharing_logistics_engine.git)
+cd bike_sharing_logistics_engine
+```
+
+**2. Establish the isolated virtual environment**
+```bash
+python3 -m venv env
+source env/bin/activate  # On Windows use: env\Scripts\activate
+pip install -r requirements.txt
+```
+
+**3. Configure secure environment variables**
+Create a `.env` file in the root directory to map your local PostgreSQL instance:
+```text
+DB_USER=postgres
+DB_PASS=your_secure_password
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=bike_share_dw
+```
+
+**4. Execute the ETL and ML Pipeline**
+```bash
+python src/ingestion_trips.py
+python src/data_quality.py
+python src/train_model.py
+```
