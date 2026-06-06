@@ -25,27 +25,39 @@ This project bridges data engineering and machine learning to forecast exact sta
 
 ```text
 bike_share_logistics_engine/
-├── .gitignore                        # Blocks env, raw data, and secret credentials
-├── README.md                         # Project documentation
-├── requirements.txt                  # Python dependencies
-├── data/                             
-│   ├── raw/                          # Raw API and historical data (Gitignored)
-│   ├── quarantine/                   # Anomalous records failing IQR checks
-│   └── processed/                    # ML feature matrices and Tableau feeds
-├── sql/                              
-│   ├── 01_create_tables.sql          # PostgreSQL schema initialization
-│   └── 02_asset_trajectories.sql     # Window functions tracking physical assets
-├── src/                              # Production Python backend
-│   ├── ingestion_stations.py         
-│   ├── ingestion_trips.py            
-│   ├── data_quality.py               # IQR Anomaly Detection
-│   ├── load_to_postgres.py           
-│   ├── build_features.py             
-│   ├── train_model.py                # XGBoost Regressor training
-│   ├── deploy_forecast.py            
-│   └── extract_for_tableau.py 
-└── tests/                            
-    └── validate_pipeline.py          # Data quality and unit tests
+├── .env                       # Local database credentials (Ignored by Git)
+├── .gitignore                 # Enterprise security and system file exclusions
+├── README.md                  # Project documentation and setup guide
+├── requirements.txt           # Strict version-pinned Python dependencies
+├── assets/                    # Rendered UI components for repository documentation
+│   └── dashboard_preview.png  # Tableau geospatial network dashboard preview
+├── data/                      # Local data storage (Ignored by Git for security)
+│   ├── processed/             # ML feature matrices and Tableau feeds
+│   ├── quarantine/            # Anomalous records failing IQR checks
+│   └── raw/                   # Raw API and historical transaction ledgers
+├── models/                    # Serialized Machine Learning Ecosystem
+│   └── xgboost_inventory_model.pkl # Production-ready trained regressor
+├── notebooks/                 # Exploratory Data Analysis & Prototyping
+│   ├── generate_eda_visual.py # Script generating statistical data profiling plots
+│   └── trip_outliers_plot.png # Visual output of IQR distribution and anomalies
+├── scripts/                   # Automated Environment Utilities
+│   └── generate_requirements.py # Custom Python script for strict dependency tracking
+├── sql/                       # Relational Database Architecture & ELT Scripts
+│   ├── asset_trajectories.sql # Window functions tracking physical assets
+│   ├── business_metrics.sql   # Aggregation queries for operational ROI
+│   └── create_tables.sql      # PostgreSQL schema initialization
+├── src/                       # Core Python ETL & Governance Engine
+│   ├── build_features.py      # Feature engineering (rolling momentum, temporal)
+│   ├── data_quality.py        # IQR anomaly detection and routing
+│   ├── deploy_forecast.py     # Inference script for live predictions
+│   ├── extract_for_tableau.py # Output generator for BI consumption
+│   ├── ingestion_stations.py  # API ingest for static physical nodes
+│   ├── ingestion_trips.py     # Transactional ledger ingestion
+│   ├── ingestion_weather.py   # Climate data integration for model features
+│   ├── load_to_postgres.py    # Database connection and insertion logic
+│   └── train_model.py         # XGBoost Regressor training pipeline
+└── tests/                     # Validation & Quality Assurance
+    └── test_data_quality.py   # Unit tests for IQR boundary limits and pipeline
 ```
 
 ---
@@ -73,13 +85,14 @@ bike_share_logistics_engine/
 ## 📸 Dashboard Previews
 
 > **Predictive Network Map:** Visualizing hourly stockout risks and estimated revenue loss.
-> <br>![Tableau Dashboard](assets/dashboard_preview.png) *(Note: Create an 'assets' folder, take a screenshot of your Tableau map, name it dashboard_preview.png, and put it in the folder to make this image render!)*
+> <br>![Tableau Dashboard](assets/dashboard_preview.png)
 
 ---
 
 ## 🚀 Local Deployment & Setup
 
-*Note: For security and compliance, the massive 3GB raw transaction dataset and the local `.env` database credentials are deliberately excluded from this repository via `.gitignore`.*
+> **⚠️ Data Privacy & Compliance Notice**
+> The massive 3GB raw transaction dataset and the local `.env` database credentials have been strictly excluded from this repository via `.gitignore` to comply with operational security and GitHub storage limits. The source code is provided for architectural demonstration. 
 
 **1. Clone the repository**
 ```bash
@@ -91,10 +104,15 @@ cd bike_sharing_logistics_engine
 ```bash
 python3 -m venv env
 source env/bin/activate  # On Windows use: env\Scripts\activate
+```
+
+**3. Freeze and audit dependencies automatically**
+```bash
+python scripts/generate_requirements.py
 pip install -r requirements.txt
 ```
 
-**3. Configure secure environment variables**
+**4. Configure secure environment variables**
 Create a `.env` file in the root directory to map your local PostgreSQL instance:
 ```text
 DB_USER=postgres
@@ -104,9 +122,12 @@ DB_PORT=5432
 DB_NAME=bike_share_dw
 ```
 
-**4. Execute the ETL and ML Pipeline**
+**5. Execute the ETL and ML Pipeline**
 ```bash
 python src/ingestion_trips.py
 python src/data_quality.py
 python src/train_model.py
 ```
+
+---
+*Developed as a comprehensive Business Analytics and Data Engineering portfolio initiative.*
