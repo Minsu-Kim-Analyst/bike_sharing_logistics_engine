@@ -59,7 +59,6 @@ def process_trip_data(file_name):
 
 
 if __name__ == "__main__":
-    # ⚠️ CHANGE THIS STRING TO THE EXACT NAME OF YOUR RAW CSV FILE
     TARGET_FILE = "bikeshare_2025_07.csv"
 
     process_trip_data(TARGET_FILE)
