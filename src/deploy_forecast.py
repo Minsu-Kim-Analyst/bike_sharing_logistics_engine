@@ -6,90 +6,54 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-# Load the secret vault
 load_dotenv()
 
-def deploy_inventory_forecast():
-    """Generates a 24-hour Net Inventory forecast for August 1, 2025."""
-
-    # Pull the passwords securely from the .env file
+def get_engine():
     DB_USER = os.getenv("DB_USER")
     DB_PASS = os.getenv("DB_PASS")
-    DB_HOST = os.getenv("DB_HOST")
-    DB_PORT = os.getenv("DB_PORT")
-    DB_NAME = os.getenv("DB_NAME")
+    DB_HOST = os.getenv("DB_HOST", "localhost")
+    DB_PORT = os.getenv("DB_PORT", "5432")
+    DB_NAME = os.getenv("DB_NAME", "bike_share_dw")
+    return create_engine(f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 
-    engine = create_engine(f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
+def deploy_scenario_forecast(start_date, days=3):
+    engine = get_engine()
+    model = joblib.load("models/xgboost_inventory_model.pkl")
 
-    model_path = Path("models/xgboost_inventory_model.pkl")
-    if not model_path.exists():
-        print("[ERROR] Model not found. Run train_model.py first.")
-        return
-
-    print("[LOADING] Booting Enterprise AI Model...")
-    model = joblib.load(model_path)
-
-    # Fetch active stations and compute their average historical outbound volume to seed rolling features
-    station_query = """
-    SELECT 
-        s.station_id, 
-        COALESCE(AVG(v.outbound_volume), 0) as historical_avg_outbound
-    FROM dim_stations s
-    LEFT JOIN view_hourly_inventory_delta v ON s.station_id = v.station_id
-    WHERE s.capacity > 0
-    GROUP BY s.station_id
-    """
+    # Get baseline historical outbound to seed the rolling momentum features
+    station_query = "SELECT station_id, COALESCE(AVG(outbound_volume), 0) as historical_avg FROM view_hourly_inventory_delta GROUP BY station_id"
     df_stations = pd.read_sql(station_query, engine)
 
-    print("[PROCESSING] Constructing 24-hour prediction matrix for August 1, 2025...")
-    target_date = datetime.date(2025, 8, 1)
+    print(f"Generating {days}-day Stress Test Scenario starting {start_date}...")
+    dates = [start_date + datetime.timedelta(days=i) for i in range(days)]
     hours = list(range(24))
 
-    # Generate the complete Cartesian product grid (Hours * Stations)
-    forecast_grid = pd.MultiIndex.from_product(
-        [df_stations['station_id'], hours],
-        names=['station_id', 'hour_of_day']
-    ).to_frame(index=False)
+    # Grid: Days * Stations * Hours
+    grid = pd.MultiIndex.from_product([dates, df_stations['station_id'], hours], names=['date', 'station_id', 'hour_of_day']).to_frame(index=False)
+    grid = grid.merge(df_stations, on='station_id')
 
-    # Link historical station characteristics back to the grid
-    forecast_grid = forecast_grid.merge(df_stations, on='station_id', how='left')
+    # Apply Scenario Logic
+    grid['day_of_week'] = grid['date'].dt.weekday
+    grid['is_weekend'] = grid['day_of_week'].apply(lambda x: 1 if x >= 5 else 0)
+    grid['is_holiday'] = 0 
+    grid['rolling_2hr_outbound'] = grid['historical_avg']
+    
+    # THE HEATWAVE STRESS TEST: Blistering 32 degrees, no wind, no rain
+    grid['temperature_celsius'] = 32.0 
+    grid['precipitation_mm'] = 0.0
+    grid['wind_speed_kmh'] = 5
 
-    # Temporal feature calculations for August 1st, 2025 (Friday)
-    forecast_grid['day_of_week'] = target_date.weekday()  # 4 = Friday
-    forecast_grid['is_weekend'] = 0
-    forecast_grid['is_holiday'] = 0
+    features = ['station_id', 'hour_of_day', 'day_of_week', 'is_weekend', 'is_holiday', 'rolling_2hr_outbound', 'temperature_celsius', 'precipitation_mm', 'wind_speed_kmh']
+    
+    # Inference
+    grid['predicted_net_inventory_change'] = model.predict(grid[features]).round(0)
+    grid['forecast_datetime'] = pd.to_datetime(grid['date']) + pd.to_timedelta(grid['hour_of_day'], unit='h')
 
-    # Seed the rolling momentum feature with the station's stable history
-    forecast_grid['rolling_2hr_outbound'] = forecast_grid['historical_avg_outbound']
-
-    # Grounding deployment variables with true historical summer weather baseline values
-    forecast_grid['temperature_celsius'] = 25.0
-    forecast_grid['precipitation_mm'] = 0.0
-    forecast_grid['wind_speed_kmh'] = 14
-
-    # Strictly align features to match the exact training matrix layout
-    features = [
-        'station_id', 'hour_of_day', 'day_of_week', 'is_weekend',
-        'is_holiday', 'rolling_2hr_outbound',
-        'temperature_celsius', 'precipitation_mm', 'wind_speed_kmh'
-    ]
-    X_predict = forecast_grid[features]
-
-    print("[INFERENCE] Executing XGBoost predictions for Network Inventory Delta...")
-    predictions = model.predict(X_predict)
-
-    # Clean, format, and assign timestamp markers to predictions
-    forecast_grid['predicted_net_inventory_change'] = predictions.round(0)
-    forecast_grid['forecast_datetime'] = pd.to_datetime('2025-08-01') + pd.to_timedelta(forecast_grid['hour_of_day'],
-                                                                                        unit='h')
-
-    final_output = forecast_grid[['forecast_datetime', 'station_id', 'predicted_net_inventory_change']]
-
-    print("[EXPORT] Pushing intelligent forecast into PostgreSQL 'fact_forecasts' table...")
-    final_output.to_sql('fact_forecasts', engine, if_exists='replace', index=False)
-
-    print(f"[SUCCESS] 24-Hour Forecasting complete. {len(final_output):,} predictions stored.")
-
+    # Export
+    grid[['forecast_datetime', 'station_id', 'predicted_net_inventory_change']].to_sql('fact_forecasts', engine, if_exists='replace', index=False)
+    print(f"Scenario storage complete: {len(grid)} rows in fact_forecasts.")
 
 if __name__ == "__main__":
-    deploy_inventory_forecast()
+    # Target: A peak summer Friday in 2026
+    start = datetime.datetime(2026, 8, 7)
+    deploy_scenario_forecast(start)

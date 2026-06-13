@@ -36,3 +36,11 @@ CREATE TABLE IF NOT EXISTS fact_trips (
 -- 4. Create Indexes for High-Speed Querying
 CREATE INDEX idx_fact_start_time ON fact_trips(start_time);
 CREATE INDEX idx_fact_start_station ON fact_trips(start_station_id);
+
+-- 5. Create Machine Learning Output Table (Forecasts)
+CREATE TABLE IF NOT EXISTS fact_forecasts (
+    forecast_datetime TIMESTAMP,
+    station_id INT REFERENCES dim_stations(station_id),
+    predicted_net_inventory_change DECIMAL(8,2),
+    PRIMARY KEY (forecast_datetime, station_id)
+);
