@@ -1,47 +1,52 @@
 import pandas as pd
 import pytest
-from pathlib import Path
+from sqlalchemy import create_engine
+import os
+from dotenv import load_dotenv
 
-
-# Load the clean data once for all tests to use
-@pytest.fixture(scope="module")
-def clean_trips_data():
-    file_path = Path("data/processed/fact_trips_clean.csv")
-    if not file_path.exists():
-        pytest.fail(f"Clean trips file missing at {file_path}. Cannot run tests.")
-    return pd.read_csv(file_path)
-
+# Load credentials
+load_dotenv()
 
 @pytest.fixture(scope="module")
-def raw_stations_data():
-    file_path = Path("data/raw/dim_stations_raw.csv")
-    if not file_path.exists():
-        pytest.fail(f"Stations file missing at {file_path}. Cannot run tests.")
-    return pd.read_csv(file_path)
-
+def db_engine():
+    DB_USER = os.getenv("DB_USER")
+    DB_PASS = os.getenv("DB_PASS")
+    DB_HOST = os.getenv("DB_HOST", "localhost")
+    DB_PORT = os.getenv("DB_PORT", "5432")
+    DB_NAME = os.getenv("DB_NAME", "bike_share_dw")
+    return create_engine(f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 
 # ==========================================
-# ENTERPRISE DATA CONTRACTS
+# ENTERPRISE DATA CONTRACTS (DB-LEVEL)
 # ==========================================
 
-def test_no_missing_critical_ids(clean_trips_data):
+def test_no_missing_critical_ids(db_engine):
     """CONTRACT 1: A trip cannot exist without a valid start and end station ID."""
-    missing_starts = clean_trips_data['start_station_id'].isna().sum()
-    missing_ends = clean_trips_data['end_station_id'].isna().sum()
+    # We push the compute to PostgreSQL to count invalid records
+    query = """
+    SELECT COUNT(*) as invalid_count 
+    FROM fact_trips 
+    WHERE start_station_id IS NULL OR end_station_id IS NULL;
+    """
+    invalid_count = pd.read_sql(query, db_engine)['invalid_count'].iloc[0]
+    assert invalid_count == 0, f"Failed: Found {invalid_count} trips with missing station IDs."
 
-    assert missing_starts == 0, f"Failed: Found {missing_starts} missing start station IDs."
-    assert missing_ends == 0, f"Failed: Found {missing_ends} missing end station IDs."
-
-
-def test_trip_duration_logical_bounds(clean_trips_data):
+def test_trip_duration_logical_bounds(db_engine):
     """CONTRACT 2: Trips must be at least 60 seconds (mechanical baseline)."""
-    invalid_durations = clean_trips_data[clean_trips_data['trip_duration_seconds'] < 60]
+    query = """
+    SELECT COUNT(*) as invalid_count 
+    FROM fact_trips 
+    WHERE trip_duration_seconds < 60;
+    """
+    invalid_count = pd.read_sql(query, db_engine)['invalid_count'].iloc[0]
+    assert invalid_count == 0, f"Failed: Found {invalid_count} trips under 60 seconds."
 
-    assert len(invalid_durations) == 0, f"Failed: Found {len(invalid_durations)} trips under 60 seconds."
-
-
-def test_station_capacity_is_positive(raw_stations_data):
+def test_station_capacity_is_positive(db_engine):
     """CONTRACT 3: A physical station cannot have a negative docking capacity."""
-    negative_capacity = raw_stations_data[raw_stations_data['capacity'] < 0]
-
-    assert len(negative_capacity) == 0, f"Failed: Found stations with negative capacity."
+    query = """
+    SELECT COUNT(*) as invalid_count 
+    FROM dim_stations 
+    WHERE capacity < 0;
+    """
+    invalid_count = pd.read_sql(query, db_engine)['invalid_count'].iloc[0]
+    assert invalid_count == 0, f"Failed: Found stations with negative capacity."
